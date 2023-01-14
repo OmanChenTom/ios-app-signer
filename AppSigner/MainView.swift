@@ -503,7 +503,7 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
             beforeFunc(file, certificate, entitlements)
         }
 
-        var arguments = ["-f", "-s", certificate, "--generate-entitlement-der"]
+        var arguments = ["-f", "-s", certificate]
         if needEntitlements {
             arguments += ["--entitlements", entitlements!]
         }
@@ -877,7 +877,7 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
                             if newApplicationID != "" {
                                 profile.update(trueAppID: newApplicationID)
                             } else if let existingBundleID = bundleID {
-                                profile.update(trueAppID: existingBundleID)
+//                                profile.update(trueAppID: existingBundleID)
                             }
                         }
                         if let entitlements = profile.getEntitlementsPlist() {
@@ -913,12 +913,31 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
                             guard allowRecursiveSearchAt(appexFile.stringByDeletingLastPathComponent) else {
                                 return
                             }
+                            
+                            let appexBundleProvisioningFilePath = appexFile.stringByAppendingPathComponent("embedded.mobileprovision")
+                            
+                            if provisioningFile != nil {
+                                if fileManager.fileExists(atPath: appexBundleProvisioningFilePath) {
+                                    setStatus("Deleting embedded.mobileprovision")
+                                    do {
+                                        try fileManager.removeItem(atPath: appexBundleProvisioningFilePath)
+                                    } catch let _ as NSError {
+                                    }
+                                    
+                                    setStatus("Copying provisioning profile to appex bundle")
+                                    do {
+                                        try fileManager.copyItem(atPath: provisioningFile!, toPath: appexBundleProvisioningFilePath)
+                                    } catch let _ as NSError {
+                                    }
+                                }
+
+                            }
 
                             let appexPlist = appexFile.stringByAppendingPathComponent("Info.plist")
                             if let appexBundleID = getPlistKey(appexPlist, keyName: "CFBundleIdentifier"){
                                 let newAppexID = "\(newApplicationID)\(appexBundleID.substring(from: oldAppID.endIndex))"
                                 setStatus("Changing \(appexFile) id to \(newAppexID)")
-                                _ = setPlistKey(appexPlist, keyName: "CFBundleIdentifier", value: newAppexID)
+//                                _ = setPlistKey(appexPlist, keyName: "CFBundleIdentifier", value: newAppexID)
                             }
                             if Process().execute(defaultsPath, workingDirectory: nil, arguments: ["read", appexPlist,"WKCompanionAppBundleIdentifier"]).status == 0 {
                                 _ = setPlistKey(appexPlist, keyName: "WKCompanionAppBundleIdentifier", value: newApplicationID)
@@ -938,12 +957,12 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
                     }
                     
                     setStatus("Changing App ID to \(newApplicationID)")
-                    let IDChangeTask = setPlistKey(appBundleInfoPlist, keyName: "CFBundleIdentifier", value: newApplicationID)
-                    if IDChangeTask.status != 0 {
-                        setStatus("Error changing App ID")
-                        Log.write(IDChangeTask.output)
-                        cleanup(tempFolder); return
-                    }
+//                    let IDChangeTask = setPlistKey(appBundleInfoPlist, keyName: "CFBundleIdentifier", value: newApplicationID)
+//                    if IDChangeTask.status != 0 {
+//                        setStatus("Error changing App ID")
+//                        Log.write(IDChangeTask.output)
+//                        cleanup(tempFolder); return
+//                    }
                 }
                 
                 //MARK: Change Display Name
